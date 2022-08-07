@@ -1,0 +1,118 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Scores</title>
+  
+  <link rel="shortcut icon" href="./icons/favicon.ico" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <meta name="theme-color" content="#6b7280" />
+  <link rel="manifest" href="./site.webmanifest">
+  
+  <link rel="stylesheet" href="./styles/app.css">
+</head>
+<body class="font-sans antialiased bg-gray-100 text-gray-500 pb-6">
+  <div x-data="scores">
+    <h1 class="sticky top-0 z-10 w-full bg-white px-6 py-3 text-center font-semibold text-2xl leading-tight border-b border-b-gray-300 shadow">Scores</h1>
+
+    <template x-if="round === -1">
+      <div>
+        <h2 class="mt-6 mx-7 mb-2 text-sm" x-text="__('Players')"></h2>
+        <div class="bg-white mx-6 p-3 shadow rounded">
+          <input type="text" class="w-full border border-gray-300 px-2 py-1 rounded mb-2 outline-teal-500" x-bind:placeholder="__('Player :n', { n: 1 })" x-model="players[0]">
+          <input type="text" class="w-full border border-gray-300 px-2 py-1 rounded mb-2 outline-teal-500" x-bind:placeholder="__('Player :n', { n: 2 })" x-model="players[1]">
+          <input type="text" class="w-full border border-gray-300 px-2 py-1 rounded mb-2 outline-teal-500" x-bind:placeholder="__('Player :n', { n: 3 })" x-model="players[2]">
+          <input type="text" class="w-full border border-gray-300 px-2 py-1 rounded mb-2 outline-teal-500" x-bind:placeholder="__('Player :n', { n: 4 })" x-model="players[3]">
+          <input type="text" class="w-full border border-gray-300 px-2 py-1 rounded mb-2 outline-teal-500" x-bind:placeholder="__('Player :n', { n: 5 })" x-model="players[4]">
+          <input type="text" class="w-full border border-gray-300 px-2 py-1 rounded mb-2 outline-teal-500" x-bind:placeholder="__('Player :n', { n: 6 })" x-model="players[5]">
+          <input type="text" class="w-full border border-gray-300 px-2 py-1 rounded mb-2 outline-teal-500" x-bind:placeholder="__('Player :n', { n: 7 })" x-model="players[6]">
+          <input type="text" class="w-full border border-gray-300 px-2 py-1 rounded mb-2 outline-teal-500" x-bind:placeholder="__('Player :n', { n: 8 })" x-model="players[7]">
+          <button class="w-full border bg-teal-500 text-white border-teal-500 px-2 py-1 rounded active:bg-teal-700" x-on:click="nextRound()" x-text="__('Start')"></button>
+        </div>
+      </div>
+    </template>
+
+    <template x-if="round >= 0">
+      <div>
+        <template x-if="rounds.length > 1">
+          <div>
+            <h2 class="mt-6 mx-7 mb-2 text-sm" x-text="__('Scores')"></h2>
+            <div class="bg-white mx-6 p-3 shadow rounded text-gray-700">
+              <table class="w-full">
+                <thead>
+                  <tr class="border-b">
+                    <template x-for="(player, i) in activePlayersShort()" :key="i">
+                      <th class="text-sm text-center font-bold" x-text="player"></th>
+                    </template>
+                </thead>
+                <tbody>
+                  <template x-for="(points, i) in roundsPoints()" :key="i">
+                    <tr>
+                      <template x-for="(p, j) in points" :key="j">
+                        <td class="text-sm text-center" x-text="p"></td>
+                      </template>
+                    </tr>
+                  </template>
+                  <tr class="border-t">
+                    <template x-for="(p, i) in totalPoints()" :key="i">
+                      <td class="text-sm text-center font-bold" x-text="p"></td>
+                    </template>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </template>
+
+        <h2 class="mt-6 mx-7 mb-2 text-sm" x-text="__('Round :n', { n: round + 1 })"></h2>
+        <div class="bg-white mx-6 p-3 shadow rounded">
+          <template x-for="(player, index) in activePlayers()" :key="index">
+            <div class="flex items-center mb-2">
+              <input type="number" class="w-full border border-gray-300 px-2 py-1 rounded outline-teal-500" x-bind:placeholder="player" x-model="rounds[round].points[index]">
+            </div>
+          </template>
+          <button class="w-full border bg-teal-500 text-white border-teal-500 px-2 py-1 rounded active:bg-teal-700" x-on:click="nextRound()" x-text="__('Next Round')"></button>
+          <div class="flex">
+            <button x-show="round > 0" class="flex-1 text-sm border bg-gray-500 text-white border-gray-500 px-2 py-1 rounded active:bg-gray-700 mt-2 mr-2" x-on:click="prevRound()" x-text="__('Correct previous round')"></button>
+            <button class="flex-1 text-sm border bg-gray-500 text-white border-gray-500 px-2 py-1 rounded active:bg-gray-700 mt-2" x-on:click="reset()" x-text="__('Reset game')"></button>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <script>
+    const sw = "service-worker.js"; // it is needed because parcel will not recognize this as a file and not precess in its manner
+
+    navigator.serviceWorker
+      .register(sw)
+      .then(registration => {
+        registration.onupdatefound = () => {
+          const installingWorker = registration.installing;
+          if (installingWorker == null) {
+            return;
+          }
+          installingWorker.onstatechange = () => {
+            if (installingWorker.state === "installed") {
+              if (navigator.serviceWorker.controller) {
+                console.log(
+                  "New content is available and will be used when all " +
+                    "tabs for this page are closed. See https://bit.ly/CRA-PWA."
+                );
+              } else {
+                console.log("Content is cached for offline use.");
+              }
+            }
+          };
+        };
+      })
+      .catch(error => {
+        console.error("Error during service worker registration:", error);
+      });
+  </script>
+  <script type="module" src="./scripts/app.js"></script>
+  <script async defer data-website-id="717fa8ff-4039-4f6d-bcd4-b76c2426a3b1" src="https://insights.popp.xyz/umami.js"></script>
+</body>
+</html>
